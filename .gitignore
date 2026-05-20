@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.pyc
+
+# 虚拟环境
+venv/
+.venv/
+
+# 环境变量
+.env
+
+# 数据库
+backend/data/auto3dquote.db
+
+# 临时文件
+backend/tmp/
+*.step_tmp
+参考文件
+图纸
+
+# 前端构建产物
+frontend/dist/
+
+# Node
+node_modules/
+
+# Playwright MCP 会话文件
+.playwright-mcp/
+
+# Claude Code
+.claude/
+
+# 截图（调试用）
+*.png
+*.jpeg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# 测试/临时 STL 文件（非 fixtures）
+/*.STL
+/*.stl
+
+# 日志
+*.log
+
+# pytest
+.pytest_cache/
