@@ -56,6 +56,11 @@ export interface CostBreakdown {
   time_cost: TimeCost
   post_process_costs: PostProcessCost[]
   delivery_surcharge: number
+  difficulty_score: number
+  difficulty_multiplier: number
+  difficulty_surcharge: number
+  support_weight: number
+  support_cost: number
   quantity_discount: number
   quantity_discount_rate: number
   base_price: number
