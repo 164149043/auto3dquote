@@ -148,11 +148,36 @@ class Settings(BaseSettings):
 
     # ==================== 最低起订价 ====================
     MINIMUM_ORDER_PER_PROCESS: dict[str, float] = {
-        "fdm": 30.0,
-        "sla": 30.0,
-        "sls": 30.0,
-        "mjf": 30.0,
-        "cnc": 100.0,
+        "fdm": 5.0,
+        "sla": 10.0,
+        "sls": 10.0,
+        "mjf": 10.0,
+        "cnc": 50.0,
+    }
+
+    # ==================== 难度系数定价 ====================
+    # 基于表面积/体积(SA/V)比衡量打印难度，薄壁件、精细件自动加价
+    # ratio_low: SA/V 低于此值视为简单，不加价 (1/mm)
+    # ratio_high: SA/V 高于此值视为最高难度 (1/mm)
+    # coefficient: 最大加价系数 (如 0.3 = 最高加价 30%)
+    # cnc_coefficient: CNC 专用系数，因 SA/V 对 CNC 相关性弱，建议低于 3D 打印
+    DIFFICULTY_PRICING: dict = {
+        "ratio_low": 0.3,
+        "ratio_high": 2.0,
+        "coefficient": 0.30,
+        "cnc_coefficient": 0.10,
+        "enabled": True,
+    }
+
+    # ==================== 支撑成本配置 ====================
+    # 基于几何特征估算 FDM 支撑材料重量，独立计费
+    # enabled: 是否启用支撑成本计算
+    # support_percent: 支撑占模型重量百分比基准 (15 = 15%)
+    # support_price_per_gram: 支撑材料单价 (¥/g)，0 表示与主材同价
+    SUPPORT_PRICING: dict = {
+        "enabled": True,
+        "support_percent": 15.0,
+        "support_price_per_gram": 0.0,
     }
 
     # ==================== 数量折扣阶梯 ====================
