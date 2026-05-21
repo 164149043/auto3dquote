@@ -14,6 +14,7 @@ from app.services.pricing.base import PricingStrategy
 from app.services.pricing.utils import (
     calc_post_process_costs,
     calc_delivery_surcharge,
+    calc_difficulty_multiplier,
     calc_quantity_discount,
     apply_minimum_order,
 )
@@ -81,7 +82,13 @@ class SLAPricingStrategy(PricingStrategy):
         pp_costs = calc_post_process_costs(post_processing, material_subtotal + time_subtotal)
         delivery_fee = calc_delivery_surcharge(delivery, material_subtotal + time_subtotal, time_cost=time_subtotal)
 
-        base_price = round_price(material_subtotal + time_subtotal + pp_costs["total"] + delivery_fee)
+        difficulty_multiplier, difficulty_score = calc_difficulty_multiplier(
+            analysis.surface_area_mm2, analysis.volume_mm3,
+        )
+        pre_difficulty = material_subtotal + time_subtotal + pp_costs["total"] + delivery_fee
+        difficulty_surcharge = round_price(pre_difficulty * (difficulty_multiplier - 1.0))
+
+        base_price = round_price(pre_difficulty + difficulty_surcharge)
         unit_price_before_discount = round_price(base_price * config_service.BASE_MARKUP_RATE)
 
         discount_amount, discount_rate = calc_quantity_discount(quantity, unit_price_before_discount)
@@ -95,6 +102,9 @@ class SLAPricingStrategy(PricingStrategy):
             time_cost=time_cost,
             post_process_costs=pp_costs["items"],
             delivery_surcharge=round_price(delivery_fee),
+            difficulty_score=difficulty_score,
+            difficulty_multiplier=difficulty_multiplier,
+            difficulty_surcharge=difficulty_surcharge,
             quantity_discount=discount_amount,
             quantity_discount_rate=discount_rate,
             base_price=base_price,
