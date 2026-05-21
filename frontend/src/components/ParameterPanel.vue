@@ -5,7 +5,6 @@ import { useQuoteApi } from '../composables/useQuoteApi'
 import MaterialSelectModal from './MaterialSelectModal.vue'
 import SurfaceTreatmentSection from './SurfaceTreatmentSection.vue'
 import DeliveryTimeSelector from './DeliveryTimeSelector.vue'
-import PriceDisplay from './PriceDisplay.vue'
 
 const props = defineProps<{
   disabled?: boolean
@@ -13,7 +12,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'params-changed': [params: QuoteParams]
-  submit: []
 }>()
 
 const { fetchOptions } = useQuoteApi()
@@ -68,7 +66,7 @@ function onDeliveryChange(id: string) {
 }
 
 function emitParams() {
-  emit('params-changed', { ...params, post_processing: [...params.post_processing] })
+  emit('params-changed', { ...params, post_processing: [...params.post_processing], paint_options: paintSelection.value })
 }
 
 function formatMaterialPrice(mat: MaterialOption) {
@@ -91,34 +89,34 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="space-y-4">
     <p v-if="optionsError" class="text-xs text-amber bg-amber/10 rounded-lg px-3 py-2 border border-amber/20">{{ optionsError }}</p>
 
     <!-- Material Selection -->
     <div>
-      <label class="block text-xs font-medium text-ghost uppercase tracking-wider mb-2">材料</label>
+      <label class="block text-[10px] font-medium text-ghost uppercase tracking-wider mb-1.5">材料</label>
       <div
         @click="disabled ? null : showMaterialModal = true"
         :class="[
-          'px-4 py-3 rounded-xl border transition-all duration-200',
+          'px-3 py-2.5 rounded-lg border transition-all duration-200',
           disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:border-teal/40 hover:bg-teal-glass',
           'border-edge bg-deep'
         ]"
       >
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div v-if="selectedMaterialInfo?.image_url" class="w-9 h-9 rounded-lg overflow-hidden bg-surface flex-shrink-0 border border-edge/50">
+          <div class="flex items-center gap-2.5">
+            <div v-if="selectedMaterialInfo?.image_url" class="w-8 h-8 rounded-md overflow-hidden bg-surface flex-shrink-0 border border-edge/50">
               <img :src="selectedMaterialInfo.image_url" :alt="selectedMaterialInfo.label" class="w-full h-full object-cover" />
             </div>
-            <div v-else class="w-9 h-9 rounded-lg bg-teal/10 border border-teal/20 flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-teal/60" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 2.75c1.24 0 2.25 1.01 2.25 2.25s-1.01 2.25-2.25 2.25S9.75 8.24 9.75 7s1.01-2.25 2.25-2.25zM17 17H7v-1.5c0-1.67 3.33-2.5 5-2.5s5 .83 5 2.5V17z"/></svg>
+            <div v-else class="w-8 h-8 rounded-md bg-teal/10 border border-teal/20 flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-teal/60" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 2.75c1.24 0 2.25 1.01 2.25 2.25s-1.01 2.25-2.25 2.25S9.75 8.24 9.75 7s1.01-2.25 2.25-2.25zM17 17H7v-1.5c0-1.67 3.33-2.5 5-2.5s5 .83 5 2.5V17z"/></svg>
             </div>
             <div>
-              <p class="font-medium text-mist text-sm">{{ selectedMaterialInfo?.label || '选择材料' }}</p>
-              <p v-if="selectedMaterialInfo" class="text-[11px] text-ghost font-mono mt-0.5">{{ formatMaterialPrice(selectedMaterialInfo) }}</p>
+              <p class="font-medium text-mist text-xs">{{ selectedMaterialInfo?.label || '选择材料' }}</p>
+              <p v-if="selectedMaterialInfo" class="text-[10px] text-ghost font-mono mt-0.5">{{ formatMaterialPrice(selectedMaterialInfo) }}</p>
             </div>
           </div>
-          <svg class="w-4 h-4 text-ghost" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+          <svg class="w-3.5 h-3.5 text-ghost" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
         </div>
       </div>
     </div>
@@ -136,12 +134,12 @@ onMounted(async () => {
 
     <!-- Quantity -->
     <div>
-      <label class="block text-xs font-medium text-ghost uppercase tracking-wider mb-2">数量</label>
-      <div class="flex items-center gap-2">
+      <label class="block text-[10px] font-medium text-ghost uppercase tracking-wider mb-1.5">数量</label>
+      <div class="flex items-center gap-1.5">
         <button
           @click="params.quantity = Math.max(1, params.quantity - 1); emitParams()"
           :disabled="disabled"
-          class="w-9 h-9 rounded-lg border border-edge bg-deep text-silver font-bold text-sm hover:border-teal/40 hover:text-teal transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          class="w-8 h-8 rounded-lg border border-edge bg-deep text-silver font-bold text-sm hover:border-teal/40 hover:text-teal transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
         >-</button>
         <input
           type="number"
@@ -149,15 +147,15 @@ onMounted(async () => {
           min="1"
           max="1000"
           :disabled="disabled"
-          class="w-20 text-center py-2 rounded-lg input-dark font-mono text-sm"
+          class="w-16 text-center py-1.5 rounded-lg input-dark font-mono text-xs"
           @change="emitParams()"
         />
         <button
           @click="params.quantity = Math.min(1000, params.quantity + 1); emitParams()"
           :disabled="disabled"
-          class="w-9 h-9 rounded-lg border border-edge bg-deep text-silver font-bold text-sm hover:border-teal/40 hover:text-teal transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          class="w-8 h-8 rounded-lg border border-edge bg-deep text-silver font-bold text-sm hover:border-teal/40 hover:text-teal transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
         >+</button>
-        <span class="text-[10px] text-ghost/50 font-mono ml-1">MAX 1000</span>
+        <span class="text-[9px] text-ghost/50 font-mono ml-1">MAX 1000</span>
       </div>
     </div>
 
@@ -169,20 +167,6 @@ onMounted(async () => {
       :disabled="!!disabled"
       @change="onDeliveryChange"
     />
-
-    <!-- Price Display + Submit -->
-    <PriceDisplay
-      :price="null"
-      :isLoading="!!disabled"
-      @submit="emit('submit')"
-    />
-
-    <!-- Action buttons -->
-    <div class="flex gap-2 pt-1">
-      <button disabled class="flex-1 py-2 rounded-lg border border-edge/50 text-ghost/30 text-xs cursor-not-allowed font-mono">CART</button>
-      <button disabled class="flex-1 py-2 rounded-lg border border-edge/50 text-ghost/30 text-xs cursor-not-allowed font-mono">COPY</button>
-      <button disabled class="flex-1 py-2 rounded-lg border border-edge/50 text-ghost/30 text-xs cursor-not-allowed font-mono">DEL</button>
-    </div>
 
     <!-- Material select modal -->
     <MaterialSelectModal
