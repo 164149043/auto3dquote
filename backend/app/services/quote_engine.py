@@ -74,4 +74,7 @@ class QuoteEngine:
             total_price=total_price,
             quantity_discount=0.0,
             quantity_discount_rate=0.0,
+            difficulty_score=0.0,
+            difficulty_multiplier=1.0,
+            difficulty_surcharge=0.0,
         )
