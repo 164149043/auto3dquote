@@ -111,6 +111,18 @@ class ConfigService:
         return stored if stored else default
 
     @property
+    def DIFFICULTY_PRICING(self) -> dict:
+        default = settings.DIFFICULTY_PRICING
+        stored = self._get_global("difficulty_pricing", None)
+        return stored if stored else default
+
+    @property
+    def SUPPORT_PRICING(self) -> dict:
+        default = settings.SUPPORT_PRICING
+        stored = self._get_global("support_pricing", None)
+        return stored if stored else default
+
+    @property
     def MATERIAL_COST_PER_GRAM(self) -> dict[str, float]:
         """向后兼容：从 MATERIAL_PRICING 提取 FDM 材料的 price"""
         return {
@@ -177,10 +189,10 @@ class ConfigService:
         self._machine_volume_max_mm = limits
 
     def _load_global_settings(self, db) -> None:
-        settings = {}
+        data = {}
         for gs in db.query(GlobalSetting).all():
-            settings[gs.key] = json.loads(gs.value)
-        self._global_settings = settings
+            data[gs.key] = json.loads(gs.value)
+        self._global_settings = data
 
 
 # 全局单例
