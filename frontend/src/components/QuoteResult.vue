@@ -56,6 +56,13 @@ defineEmits<{
             <span class="text-[10px] text-ghost/60 block font-mono">{{ result.quote.material_cost.quantity }}{{ result.quote.material_cost.unit }} × ¥{{ result.quote.material_cost.unit_price }}/{{ result.quote.material_cost.unit }}</span>
           </div>
         </div>
+        <div v-if="result.quote.support_cost > 0" class="flex justify-between items-center py-1">
+          <span class="text-sm text-ghost">支撑材料</span>
+          <div class="text-right">
+            <span class="text-sm font-mono text-mist">{{ formatPrice(result.quote.support_cost) }}</span>
+            <span class="text-[10px] text-ghost/60 block font-mono">{{ result.quote.support_weight.toFixed(1) }}g 估算</span>
+          </div>
+        </div>
         <div class="flex justify-between items-center py-1">
           <span class="text-sm text-ghost">时间成本</span>
           <div class="text-right">
@@ -70,6 +77,13 @@ defineEmits<{
         <div v-if="result.quote.delivery_surcharge > 0" class="flex justify-between items-center py-1">
           <span class="text-sm text-ghost">交期加急费</span>
           <span class="text-sm font-mono text-amber">{{ formatPrice(result.quote.delivery_surcharge) }}</span>
+        </div>
+        <div v-if="result.quote.difficulty_surcharge > 0" class="flex justify-between items-center py-1">
+          <span class="text-sm text-ghost flex items-center gap-1.5">
+            难度加价
+            <span class="text-[10px] text-ghost/50 font-mono">(SA/V: ×{{ result.quote.difficulty_multiplier.toFixed(2) }})</span>
+          </span>
+          <span class="text-sm font-mono text-amber">{{ formatPrice(result.quote.difficulty_surcharge) }}</span>
         </div>
         <div v-if="result.quote.quantity_discount > 0" class="flex justify-between items-center py-1">
           <span class="text-sm text-ghost">数量折扣 ({{ (result.quote.quantity_discount_rate * 100).toFixed(0) }}% off)</span>
