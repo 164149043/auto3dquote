@@ -4,6 +4,8 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { STLLoader } from 'three/addons/loaders/STLLoader.js'
 
+const DEFAULT_THUMB_COLOR = 0x00e5c7
+
 const props = defineProps<{
   fileName: string
   file: File | Blob | null
@@ -11,6 +13,7 @@ const props = defineProps<{
   volume: number | null
   vertices: number | null
   triangles: number | null
+  paintColor?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -88,7 +91,7 @@ function loadModel(file: File | Blob) {
     }
 
     const material = new THREE.MeshStandardMaterial({
-      color: 0x00e5c7,
+      color: props.paintColor ? new THREE.Color(props.paintColor) : DEFAULT_THUMB_COLOR,
       metalness: 0.3,
       roughness: 0.4,
       emissive: 0x003322,
@@ -130,6 +133,12 @@ watch(() => props.file, (newFile) => {
   if (newFile && scene) loadModel(newFile)
 })
 
+watch(() => props.paintColor, (color) => {
+  if (!currentMesh) return
+  const mat = currentMesh.material as THREE.MeshStandardMaterial
+  mat.color.set(color ? new THREE.Color(color) : DEFAULT_THUMB_COLOR)
+})
+
 onMounted(() => {
   initScene()
   if (props.file) loadModel(props.file)
@@ -151,7 +160,7 @@ onUnmounted(() => {
     <div class="flex flex-col sm:flex-row">
       <!-- 3D Thumbnail -->
       <div
-        class="sm:w-72 h-52 cursor-pointer relative group flex-shrink-0 overflow-hidden"
+        class="sm:w-60 h-40 cursor-pointer relative group flex-shrink-0 overflow-hidden"
         @click="emit('preview-click')"
       >
         <div ref="thumbnailContainer" class="w-full h-full"></div>
