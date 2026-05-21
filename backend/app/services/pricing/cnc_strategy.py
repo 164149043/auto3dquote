@@ -11,12 +11,13 @@ CNC 按毛坯材料 + 加工时长计费：
 from app.services.config_service import config_service
 from app.models.analysis import MeshAnalysisResult
 from app.models.common import DeliveryOption, PostProcessType
-from app.models.quote import CostBreakdown, MaterialCost, PostProcessCost, TimeCost
+from app.models.quote import CostBreakdown, MaterialCost, TimeCost
 from app.models.slicing import SlicingResult
 from app.services.pricing.base import PricingStrategy
 from app.services.pricing.utils import (
     calc_post_process_costs,
     calc_delivery_surcharge,
+    calc_difficulty_multiplier,
     calc_quantity_discount,
     apply_minimum_order,
 )
@@ -72,7 +73,14 @@ class CNCPricingStrategy(PricingStrategy):
         pp_costs = calc_post_process_costs(post_processing, base_before_extras)
         delivery_fee = calc_delivery_surcharge(delivery, base_before_extras, time_cost=machining_cost)
 
-        base_price = round_price(base_before_extras + pp_costs["total"] + delivery_fee)
+        difficulty_multiplier, difficulty_score = calc_difficulty_multiplier(
+            analysis.surface_area_mm2, analysis.volume_mm3,
+            override_coefficient=config_service.DIFFICULTY_PRICING.get("cnc_coefficient", 0.10),
+        )
+        pre_difficulty = base_before_extras + pp_costs["total"] + delivery_fee
+        difficulty_surcharge = round_price(pre_difficulty * (difficulty_multiplier - 1.0))
+
+        base_price = round_price(pre_difficulty + difficulty_surcharge)
         unit_price_before_discount = round_price(base_price * config_service.BASE_MARKUP_RATE)
 
         discount_amount, discount_rate = calc_quantity_discount(quantity, unit_price_before_discount)
@@ -86,6 +94,9 @@ class CNCPricingStrategy(PricingStrategy):
             time_cost=time_cost,
             post_process_costs=pp_costs["items"],
             delivery_surcharge=round_price(delivery_fee),
+            difficulty_score=difficulty_score,
+            difficulty_multiplier=difficulty_multiplier,
+            difficulty_surcharge=difficulty_surcharge,
             quantity_discount=discount_amount,
             quantity_discount_rate=discount_rate,
             base_price=base_price,
