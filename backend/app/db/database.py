@@ -3,6 +3,7 @@
 """
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -82,7 +83,7 @@ def _seed_materials(db: Session) -> None:
         "SS316": "metal", "BRASS": "metal", "TC4": "metal",
     }
 
-    now = __import__("datetime").datetime.now().isoformat()
+    now = datetime.now().isoformat()
     for mat_id, mat_data in settings.MATERIAL_PRICING.items():
         db.add(Material(
             id=mat_id,
@@ -111,7 +112,7 @@ def _seed_post_processes(db: Session) -> None:
     if db.query(PostProcess).first():
         return
 
-    now = __import__("datetime").datetime.now().isoformat()
+    now = datetime.now().isoformat()
     for pp_id, pp_data in settings.POST_PROCESS_PRICING.items():
         db.add(PostProcess(
             id=pp_id,
@@ -133,7 +134,7 @@ def _seed_delivery_options(db: Session) -> None:
     if db.query(DeliveryOption).first():
         return
 
-    now = __import__("datetime").datetime.now().isoformat()
+    now = datetime.now().isoformat()
     for del_id, del_data in settings.DELIVERY_SURCHARGE.items():
         db.add(DeliveryOption(
             id=del_id,
@@ -167,7 +168,7 @@ def _seed_global_settings(db: Session) -> None:
     if db.query(GlobalSetting).first():
         return
 
-    now = __import__("datetime").datetime.now().isoformat()
+    now = datetime.now().isoformat()
     scalar_settings = {
         "time_cost_per_hour": {
             "value": json.dumps(settings.TIME_COST_PER_HOUR),
@@ -192,6 +193,14 @@ def _seed_global_settings(db: Session) -> None:
         "quantity_discount_tiers": {
             "value": json.dumps(settings.QUANTITY_DISCOUNT_TIERS),
             "description": "数量折扣阶梯配置",
+        },
+        "difficulty_pricing": {
+            "value": json.dumps(settings.DIFFICULTY_PRICING),
+            "description": "难度系数定价配置 (SA/V比 → 加价系数)",
+        },
+        "support_pricing": {
+            "value": json.dumps(settings.SUPPORT_PRICING),
+            "description": "支撑成本配置 (估算比例 × 单价)",
         },
     }
 
