@@ -7,12 +7,15 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 
 const props = defineProps<{
   file: File | Blob | null
+  paintColor?: string | null
 }>()
 
 const emit = defineEmits<{
   'model-loaded': [info: { vertices: number; triangles: number }]
   'load-error': [message: string]
 }>()
+
+const DEFAULT_COLOR = 0x3b82f6
 
 const canvasContainer = ref<HTMLDivElement | null>(null)
 const isLoading = ref(false)
@@ -280,7 +283,7 @@ function loadModel(file: File | Blob) {
     }
 
     const material = new THREE.MeshPhongMaterial({
-      color: 0x3b82f6,
+      color: props.paintColor ? new THREE.Color(props.paintColor) : DEFAULT_COLOR,
       specular: 0x111111,
       shininess: 50,
     })
@@ -322,6 +325,12 @@ function loadModel(file: File | Blob) {
 
 watch(() => props.file, (newFile) => {
   if (newFile && scene) loadModel(newFile)
+})
+
+watch(() => props.paintColor, (color) => {
+  if (!currentMesh) return
+  const mat = currentMesh.material as THREE.MeshPhongMaterial
+  mat.color.set(color ? new THREE.Color(color) : DEFAULT_COLOR)
 })
 
 onMounted(() => {
