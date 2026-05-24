@@ -65,3 +65,45 @@ class QuoteResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list, description="所有警告")
     processing_time_seconds: float = Field(0.0, description="总处理耗时 (秒)")
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat(), description="时间戳")
+
+
+class QuoteRecordItem(BaseModel):
+    """报价记录列表摘要"""
+    id: int
+    filename: str
+    process: str
+    material: str
+    quantity: int
+    status: str
+    unit_price: float
+    total_price: float
+    created_at: str
+
+
+class QuoteRecordDetail(QuoteRecordItem):
+    """报价记录完整详情"""
+    quality: str
+    delivery: str
+    post_processing: str | None
+    material_cost: float
+    time_cost: float
+    post_process_cost: float
+    delivery_surcharge: float
+    difficulty_surcharge: float
+    support_cost: float
+    quantity_discount: float
+    volume_mm3: float
+    surface_area_mm2: float
+    bounding_box: str | None
+    file_size_bytes: int | None
+    print_time_seconds: float | None
+    filament_used_grams: float | None
+    processing_time_seconds: float
+
+
+class QuoteRecordListResponse(BaseModel):
+    """报价记录分页响应"""
+    total: int
+    page: int
+    page_size: int
+    records: list[QuoteRecordItem]

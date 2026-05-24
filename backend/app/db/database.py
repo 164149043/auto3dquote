@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
@@ -19,6 +19,8 @@ from app.db.models import (
     PostProcess,
     ProcessMaterial,
     ProcessPostProcess,
+    QuoteRecord,
+    User,
 )
 from app.utils.logging_utils import get_logger
 
@@ -42,10 +44,28 @@ def get_db() -> Session:
 
 
 def init_db() -> None:
-    """建表（如果不存在）"""
+    """建表（如果不存在），并处理增量迁移"""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+
+    # 增量迁移：为已有的 users 表添加 role 列
+    _migrate_add_role_column()
+
     logger.info("数据库就绪: %s", DB_PATH)
+
+
+def _migrate_add_role_column() -> None:
+    """如果 users 表缺少 role 列，自动添加"""
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("PRAGMA table_info(users)"))
+            columns = [row[1] for row in result]
+            if "role" not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'user'"))
+                conn.commit()
+                logger.info("迁移: users 表新增 role 列")
+    except Exception as e:
+        logger.warning("迁移检查跳过: %s", e)
 
 
 def seed_db() -> None:
@@ -57,6 +77,7 @@ def seed_db() -> None:
         _seed_delivery_options(db)
         _seed_machine_limits(db)
         _seed_global_settings(db)
+        _seed_admin_user(db)
         db.commit()
         logger.info("种子数据检查完成")
     except Exception as e:
@@ -213,3 +234,29 @@ def _seed_global_settings(db: Session) -> None:
         ))
 
     logger.info("种子: 写入 %d 条全局设置", db.query(GlobalSetting).count())
+
+
+def _seed_admin_user(db: Session) -> None:
+    """如果配置了管理员账号且不存在，自动创建"""
+    if not settings.ADMIN_USERNAME or not settings.ADMIN_PASSWORD:
+        return
+
+    from app.core.security import hash_password
+
+    existing = db.query(User).filter(User.username == settings.ADMIN_USERNAME).first()
+    if existing:
+        if existing.role != "admin":
+            existing.role = "admin"
+            logger.info("种子: 更新用户 '%s' 为 admin 角色", settings.ADMIN_USERNAME)
+        return
+
+    now = datetime.now().isoformat()
+    db.add(User(
+        username=settings.ADMIN_USERNAME,
+        hashed_password=hash_password(settings.ADMIN_PASSWORD),
+        role="admin",
+        is_active=1,
+        created_at=now,
+        updated_at=now,
+    ))
+    logger.info("种子: 创建管理员账号 '%s'", settings.ADMIN_USERNAME)

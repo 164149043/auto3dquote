@@ -98,3 +98,50 @@ class GlobalSetting(Base):
     value = Column(Text, nullable=False)  # JSON 字符串
     description = Column(Text, nullable=True)
     updated_at = Column(String, nullable=False, default=lambda: datetime.now().isoformat())
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String, unique=True, nullable=False, index=True)
+    hashed_password = Column(String, nullable=False)
+    role = Column(String, nullable=False, default="user")  # "user" / "admin"
+    is_active = Column(Integer, nullable=False, default=1)
+    created_at = Column(String, nullable=False, default=lambda: datetime.now().isoformat())
+    updated_at = Column(String, nullable=False, default=lambda: datetime.now().isoformat())
+
+
+class QuoteRecord(Base):
+    __tablename__ = "quote_records"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    filename = Column(String(255), nullable=False)
+    process = Column(String(20), nullable=False)
+    material = Column(String(50), nullable=False)
+    quality = Column(String(20), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+    delivery = Column(String(20), nullable=False)
+    post_processing = Column(Text, nullable=True)
+    status = Column(String(20), nullable=False)
+    # 价格
+    unit_price = Column(Float, nullable=False, default=0.0)
+    total_price = Column(Float, nullable=False, default=0.0)
+    material_cost = Column(Float, nullable=False, default=0.0)
+    time_cost = Column(Float, nullable=False, default=0.0)
+    post_process_cost = Column(Float, nullable=False, default=0.0)
+    delivery_surcharge = Column(Float, nullable=False, default=0.0)
+    difficulty_surcharge = Column(Float, nullable=False, default=0.0)
+    support_cost = Column(Float, nullable=False, default=0.0)
+    quantity_discount = Column(Float, nullable=False, default=0.0)
+    # 模型数据
+    volume_mm3 = Column(Float, nullable=False, default=0.0)
+    surface_area_mm2 = Column(Float, nullable=False, default=0.0)
+    bounding_box = Column(String(100), nullable=True)
+    file_size_bytes = Column(Integer, nullable=True)
+    # 切片数据
+    print_time_seconds = Column(Float, nullable=True)
+    filament_used_grams = Column(Float, nullable=True)
+    processing_time_seconds = Column(Float, nullable=False, default=0.0)
+    created_at = Column(String, nullable=False, default=lambda: datetime.now().isoformat())

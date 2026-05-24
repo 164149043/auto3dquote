@@ -1,13 +1,21 @@
 """报价端点 — 核心接口，上传 3D 模型获取报价"""
 
+import json
+
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
+from app.core.dependencies import get_current_user, get_pipeline
+from app.db.database import get_db
+from app.db.models import QuoteRecord, User
 from app.services.config_service import config_service
-from app.core.dependencies import get_pipeline
 from app.models.common import DeliveryOption, PostProcessType, ProcessType, QualityPreset
 from app.models.quote import QuoteResponse
 from app.services.pipeline import AnalysisPipeline
+from app.utils.logging_utils import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -23,6 +31,8 @@ async def create_quote(
     delivery: str = Form("standard", description="交期: standard/express/urgent"),
     paint_options: str = Form("", description='喷漆子选项 JSON: {"finish":"matte","color":"#FF0000"}'),
     pipeline: AnalysisPipeline = Depends(get_pipeline),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
     接收 3D 模型文件，执行自动分析和报价。
@@ -57,4 +67,48 @@ async def create_quote(
                 if item in valid_pp:
                     pp_list.append(pp)
 
-    return await pipeline.execute(file, proc, material, qual, quantity, pp_list or None, deliv)
+    result = await pipeline.execute(file, proc, material, qual, quantity, pp_list or None, deliv)
+
+    # 保存报价记录（不影响返回）
+    try:
+        q = result.quote
+        a = result.analysis
+        s = result.slicing
+        record = QuoteRecord(
+            user_id=current_user.id,
+            filename=file.filename or "unknown",
+            process=proc.value,
+            material=material,
+            quality=qual.value,
+            quantity=quantity,
+            delivery=deliv.value,
+            post_processing=post_processing if post_processing.strip() else None,
+            status=result.status,
+            unit_price=q.unit_price if q else 0,
+            total_price=q.total_price if q else 0,
+            material_cost=q.material_cost.subtotal if q and q.material_cost else 0,
+            time_cost=q.time_cost.subtotal if q and q.time_cost else 0,
+            post_process_cost=sum(p.subtotal for p in q.post_process_costs) if q else 0,
+            delivery_surcharge=q.delivery_surcharge if q else 0,
+            difficulty_surcharge=q.difficulty_surcharge if q else 0,
+            support_cost=q.support_cost if q else 0,
+            quantity_discount=q.quantity_discount if q else 0,
+            volume_mm3=a.volume_mm3 if a else 0,
+            surface_area_mm2=a.surface_area_mm2 if a else 0,
+            bounding_box=json.dumps({
+                "x": a.bounding_box.x_mm,
+                "y": a.bounding_box.y_mm,
+                "z": a.bounding_box.z_mm,
+            }) if a else None,
+            file_size_bytes=a.file_size_bytes if a else None,
+            print_time_seconds=s.print_time_seconds if s else None,
+            filament_used_grams=s.filament_used_grams if s else None,
+            processing_time_seconds=result.processing_time_seconds,
+        )
+        db.add(record)
+        db.commit()
+    except Exception as e:
+        logger.warning("报价记录保存失败: %s", e)
+        db.rollback()
+
+    return result

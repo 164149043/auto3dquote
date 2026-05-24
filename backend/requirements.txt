@@ -17,6 +17,11 @@ gmsh>=4.13.0
 sqlalchemy>=2.0
 aiosqlite
 
+# 认证
+PyJWT==2.10.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+
 # 测试
 pytest==8.3.4
 pytest-asyncio==0.24.0

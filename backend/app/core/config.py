@@ -202,9 +202,18 @@ class Settings(BaseSettings):
     # ==================== 日志配置 ====================
     LOG_LEVEL: str = "INFO"
 
+    # ==================== 用户认证配置 ====================
+    SECRET_KEY: str = "change-me-in-production-use-a-long-random-string"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 天
+
     # ==================== 管理后台配置 ====================
     # Admin API 认证 Token，留空则启动时自动生成并打印到日志
     ADMIN_TOKEN: str = ""
+
+    # 管理员种子账号（仅首次启动时创建）
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = ""
 
 
 # 全局配置单例

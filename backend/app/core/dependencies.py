@@ -4,7 +4,13 @@ FastAPI 依赖注入
 将所有服务组装成 AnalysisPipeline 并注入到路由端点。
 """
 
+from fastapi import Depends, Header, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
+from app.core.security import decode_access_token
+from app.db.database import get_db
+from app.db.models import User
 from app.services.config_service import config_service
 from app.services.file_service import FileService
 from app.services.gcode_parser import GCodeParserService
@@ -47,3 +53,37 @@ def get_pipeline() -> AnalysisPipeline:
         slicer=get_slicer_service(),
         gcode_parser=get_gcode_parser(),
     )
+
+
+async def get_current_user(
+    authorization: str = Header(..., alias="Authorization"),
+    db: Session = Depends(get_db),
+) -> User:
+    """验证 JWT Bearer Token 并返回当前用户"""
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="无效的认证格式",
+        )
+    token = authorization[7:]
+    try:
+        payload = decode_access_token(token)
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效的认证令牌",
+            )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="认证令牌已过期或无效",
+        )
+
+    user = db.query(User).filter(User.username == username).first()
+    if user is None or user.is_active != 1:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="用户不存在或已禁用",
+        )
+    return user
