@@ -143,7 +143,7 @@ watch(() => props.visible, (v) => {
                 <span
                   v-if="previewMaterial.category"
                   class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-mono text-teal border border-teal/20 bg-teal/8"
-                >{{ MATERIAL_CATEGORIES.find(c => c.id === previewMaterial.category)?.labelZh || previewMaterial.category }}</span>
+                >{{ MATERIAL_CATEGORIES.find(c => c.id === previewMaterial!.category)?.labelZh || previewMaterial!.category }}</span>
 
                 <!-- Description -->
                 <p v-if="previewMaterial.description" class="text-xs text-ghost/70 mt-3 leading-relaxed">

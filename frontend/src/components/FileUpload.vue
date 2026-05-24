@@ -75,10 +75,6 @@ function onFileInput(e: Event) {
   input.value = ''
 }
 
-function reset() {
-  files.value = []
-  error.value = ''
-}
 </script>
 
 <template>

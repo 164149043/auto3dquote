@@ -3,6 +3,9 @@ import { ref, computed } from 'vue'
 import FileUpload from '../components/FileUpload.vue'
 import QuoteCard from '../components/QuoteCard.vue'
 import { formatPrice } from '../utils/format'
+import { useAuth } from '../composables/useAuth'
+
+const { isAuthenticated, openLoginModal } = useAuth()
 
 type Stage = 'upload' | 'configure'
 const stage = ref<Stage>('upload')
@@ -91,6 +94,35 @@ function onReset() {
 
 <template>
   <div class="relative">
+    <!-- 未登录提示 -->
+    <div v-if="!isAuthenticated" class="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center relative overflow-hidden">
+      <div class="absolute inset-0 bg-blueprint opacity-40"></div>
+      <div class="absolute inset-0" style="background: radial-gradient(ellipse at 50% 40%, rgba(0,229,199,0.06) 0%, transparent 60%);"></div>
+
+      <div class="relative z-10 flex flex-col items-center text-center animate-fade-in-up">
+        <div class="w-16 h-16 rounded-2xl bg-teal/10 flex items-center justify-center mb-6">
+          <svg class="w-8 h-8 text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <h2 class="font-display text-3xl md:text-4xl font-bold text-white mb-3 tracking-tight">
+          请登录后使用报价服务
+        </h2>
+        <p class="text-silver/70 text-base max-w-md mx-auto leading-relaxed mb-8">
+          登录您的账号即可上传 3D 模型，获取精确的打印报价
+        </p>
+        <button
+          @click="openLoginModal"
+          class="btn-primary px-8 py-3 text-sm font-medium"
+        >
+          立即登录
+        </button>
+      </div>
+    </div>
+
+    <!-- 已登录：正常报价流程 -->
+    <template v-else>
     <!-- Stage 1: Upload Hero -->
     <div v-if="stage === 'upload'" class="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center relative overflow-hidden">
       <div class="absolute inset-0 bg-blueprint opacity-40"></div>
@@ -194,6 +226,7 @@ function onReset() {
         </div>
       </div>
     </Transition>
+    </template>
   </div>
 </template>
 

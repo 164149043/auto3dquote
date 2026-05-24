@@ -2,9 +2,20 @@
  * API 调用封装
  */
 
-import type { QuoteResponse, OptionsResponse, QuoteParams } from '../types/api'
+import type {
+  QuoteResponse,
+  OptionsResponse,
+  QuoteParams,
+  QuoteRecordListResponse,
+  QuoteRecordDetail,
+} from '../types/api'
 
 const API_BASE = '/api/v1'
+
+function getAuthHeaders(): Record<string, string> {
+  const t = localStorage.getItem('user_token') || ''
+  return t ? { Authorization: `Bearer ${t}` } : {}
+}
 
 export function useQuoteApi() {
   async function submitQuote(file: File, params: QuoteParams): Promise<QuoteResponse> {
@@ -23,18 +34,23 @@ export function useQuoteApi() {
       }))
     }
 
+    const headers: Record<string, string> = getAuthHeaders()
     const response = await fetch(`${API_BASE}/quote`, {
       method: 'POST',
+      headers,
       body: formData,
     })
+
+    if (response.status === 401) {
+      localStorage.removeItem('user_token')
+      throw new Error('登录已过期，请重新登录')
+    }
 
     if (!response.ok) {
       let msg = `请求失败 (${response.status})`
       try {
         const data = await response.json()
-        // 业务错误: { message: "..." }
         if (data.message) msg = data.message
-        // FastAPI 422 校验错误: { detail: [{ msg: "..." }] }
         else if (Array.isArray(data.detail)) msg = data.detail.map((d: any) => d.msg).join('; ')
         else if (typeof data.detail === 'string') msg = data.detail
       } catch { /* JSON 解析失败，用默认消息 */ }
@@ -72,5 +88,39 @@ export function useQuoteApi() {
     return response.blob()
   }
 
-  return { submitQuote, fetchOptions, healthCheck, convertToStl }
+  // ==================== 报价历史 ====================
+
+  async function fetchQuoteRecords(page = 1, pageSize = 10): Promise<QuoteRecordListResponse> {
+    const res = await fetch(`${API_BASE}/auth/quotes?page=${page}&page_size=${pageSize}`, {
+      headers: getAuthHeaders(),
+    })
+    if (!res.ok) throw new Error('获取报价记录失败')
+    return res.json()
+  }
+
+  async function fetchQuoteRecordDetail(id: number): Promise<QuoteRecordDetail> {
+    const res = await fetch(`${API_BASE}/auth/quotes/${id}`, {
+      headers: getAuthHeaders(),
+    })
+    if (!res.ok) throw new Error('获取报价详情失败')
+    return res.json()
+  }
+
+  async function deleteQuoteRecord(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/auth/quotes/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    })
+    if (!res.ok) throw new Error('删除失败')
+  }
+
+  return {
+    submitQuote,
+    fetchOptions,
+    healthCheck,
+    convertToStl,
+    fetchQuoteRecords,
+    fetchQuoteRecordDetail,
+    deleteQuoteRecord,
+  }
 }

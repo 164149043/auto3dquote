@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import type { QuoteParams, OptionsResponse, ProcessOption, PostProcessOption, DeliveryOption, MaterialOption, PaintConfig } from '../types/api'
+import type { QuoteParams, OptionsResponse, ProcessOption, MaterialOption, PaintConfig } from '../types/api'
 import { useQuoteApi } from '../composables/useQuoteApi'
 import MaterialSelectModal from './MaterialSelectModal.vue'
 import SurfaceTreatmentSection from './SurfaceTreatmentSection.vue'

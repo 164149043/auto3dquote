@@ -1,9 +1,20 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuth } from './composables/useAuth'
+import LoginModal from './components/login/LoginModal.vue'
+import ChangePasswordDialog from './components/ChangePasswordDialog.vue'
 
 const route = useRoute()
-const isAdmin = computed(() => route.path.startsWith('/admin'))
+const isAdminRoute = computed(() => route.path.startsWith('/admin'))
+
+const { user, isAuthenticated, isAdmin, logout, showLoginModal, openLoginModal, closeLoginModal } = useAuth()
+
+const showChangePassword = ref(false)
+
+function handleLogout() {
+  logout()
+}
 </script>
 
 <template>
@@ -27,7 +38,14 @@ const isAdmin = computed(() => route.path.startsWith('/admin'))
         <!-- Nav links -->
         <div class="flex items-center gap-6">
           <router-link
-            v-if="!isAdmin"
+            v-if="isAuthenticated && !isAdminRoute"
+            to="/my-quotes"
+            class="text-xs font-medium text-ghost hover:text-teal no-underline transition-colors duration-200 tracking-wide uppercase"
+          >
+            我的报价
+          </router-link>
+          <router-link
+            v-if="!isAdminRoute"
             to="/admin"
             class="text-xs font-medium text-ghost hover:text-teal no-underline transition-colors duration-200 tracking-wide uppercase"
           >
@@ -40,6 +58,37 @@ const isAdmin = computed(() => route.path.startsWith('/admin'))
           >
             返回报价
           </router-link>
+
+          <div class="w-px h-4 bg-edge"></div>
+
+          <!-- 用户认证状态 -->
+          <template v-if="isAuthenticated">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-silver font-medium">{{ user?.username }}</span>
+              <span v-if="isAdmin" class="text-[10px] px-1.5 py-0.5 rounded bg-teal/15 text-teal font-medium">管理员</span>
+              <button
+                @click="showChangePassword = true"
+                class="text-xs font-medium text-ghost hover:text-silver transition-colors duration-200"
+              >
+                改密
+              </button>
+              <button
+                @click="handleLogout"
+                class="text-xs font-medium text-ghost hover:text-danger transition-colors duration-200"
+              >
+                退出
+              </button>
+            </div>
+          </template>
+          <template v-else>
+            <button
+              @click="openLoginModal"
+              class="text-xs font-medium text-teal hover:text-teal-dim transition-colors duration-200 tracking-wide uppercase"
+            >
+              登录
+            </button>
+          </template>
+
           <div class="w-px h-4 bg-edge"></div>
           <span class="text-xs text-ghost/60 font-mono">v1.0</span>
         </div>
@@ -58,5 +107,11 @@ const isAdmin = computed(() => route.path.startsWith('/admin'))
         <span class="text-xs text-ghost/30 font-mono">Powered by PrusaSlicer</span>
       </div>
     </footer>
+
+    <!-- 全局登录模态框 -->
+    <LoginModal v-if="showLoginModal" @close="closeLoginModal" />
+
+    <!-- 修改密码对话框 -->
+    <ChangePasswordDialog v-if="showChangePassword" @close="showChangePassword = false" />
   </div>
 </template>

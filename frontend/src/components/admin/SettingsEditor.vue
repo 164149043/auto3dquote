@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useAdminApi } from '../../composables/useAdminApi'
 
 const { listSettings, updateSetting, refreshCache } = useAdminApi()

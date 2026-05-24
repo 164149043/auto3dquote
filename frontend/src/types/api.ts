@@ -151,3 +151,71 @@ export interface QuoteParams {
   delivery: string
   paint_options?: PaintConfig | null
 }
+
+// ==================== 用户认证类型 ====================
+
+export interface UserResponse {
+  id: number
+  username: string
+  role: string
+  is_active: number
+  created_at: string
+}
+
+export interface TokenResponse {
+  access_token: string
+  token_type: string
+  user: UserResponse
+}
+
+export interface CaptchaResponse {
+  captcha_id: string
+  captcha_image: string
+}
+
+// ==================== 报价记录类型 ====================
+
+export interface QuoteRecordItem {
+  id: number
+  filename: string
+  process: string
+  material: string
+  quantity: number
+  status: string
+  unit_price: number
+  total_price: number
+  created_at: string
+}
+
+export interface QuoteRecordDetail extends QuoteRecordItem {
+  quality: string
+  delivery: string
+  post_processing: string | null
+  material_cost: number
+  time_cost: number
+  post_process_cost: number
+  delivery_surcharge: number
+  difficulty_surcharge: number
+  support_cost: number
+  quantity_discount: number
+  volume_mm3: number
+  surface_area_mm2: number
+  bounding_box: string | null
+  file_size_bytes: number | null
+  print_time_seconds: number | null
+  filament_used_grams: number | null
+  processing_time_seconds: number
+}
+
+export interface QuoteRecordListResponse {
+  total: number
+  page: number
+  page_size: number
+  records: QuoteRecordItem[]
+}
+
+export interface ChangePasswordRequest {
+  old_password: string
+  new_password: string
+  confirm_password: string
+}

@@ -161,7 +161,7 @@ onMounted(load)
         </div>
         <div class="col-span-2">
           <label class="block text-xs text-gray-600 mb-1">材料介绍</label>
-          <textarea v-model="addForm.description" class="w-full px-2 py-1.5 border rounded text-sm" rows="2" placeholder="可选，填写材料特性描述"></textarea>
+          <textarea :value="String(addForm.description ?? '')" @input="addForm.description = ($event.target as HTMLTextAreaElement).value" class="w-full px-2 py-1.5 border rounded text-sm" rows="2" placeholder="可选，填写材料特性描述"></textarea>
         </div>
         <div class="flex items-end">
           <button class="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg" @click="addMaterial">

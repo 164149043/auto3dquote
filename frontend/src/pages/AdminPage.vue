@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAdminApi } from '../composables/useAdminApi'
+import { useAuth } from '../composables/useAuth'
 import AdminLogin from '../components/admin/AdminLogin.vue'
 import MaterialEditor from '../components/admin/MaterialEditor.vue'
 import PostProcessEditor from '../components/admin/PostProcessEditor.vue'
@@ -9,9 +10,15 @@ import ProcessMappingEditor from '../components/admin/ProcessMappingEditor.vue'
 import MachineLimitsEditor from '../components/admin/MachineLimitsEditor.vue'
 import SettingsEditor from '../components/admin/SettingsEditor.vue'
 
-const { getToken, clearToken } = useAdminApi()
+const { getToken, clearToken, setToken } = useAdminApi()
+const { isAdmin, isAuthenticated, token: userToken } = useAuth()
 
-const authenticated = ref(!!getToken())
+// 如果管理员已通过主页面登录但没有 admin_token，同步 JWT 到 admin_token
+if (!getToken() && isAuthenticated.value && isAdmin.value && userToken.value) {
+  setToken(userToken.value)
+}
+
+const authenticated = ref(!!getToken() && (!isAuthenticated.value || isAdmin.value))
 const activeTab = ref('materials')
 
 const TABS = [
