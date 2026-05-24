@@ -1,6 +1,6 @@
 # Auto3DQuote — 3D 打印自动报价系统
 
-基于 PrusaSlicer 的 3D 打印自动报价平台。用户上传 3D 模型文件后，系统自动分析模型几何信息、执行切片（FDM 工艺），并根据材料、时间、后处理、交期等参数实时计算报价。
+基于 PrusaSlicer 的 3D 打印自动报价平台。用户注册/登录后上传 3D 模型文件，系统自动分析模型几何信息、执行切片（FDM 工艺），并根据材料、时间、后处理、交期等参数实时计算报价。支持批量多文件上传、参数变更自动重新报价、历史报价记录查看和账号管理。
 
 > **技术栈**：FastAPI + SQLAlchemy + Vue 3 + TypeScript + Three.js + TailwindCSS + PrusaSlicer CLI
 
@@ -16,6 +16,8 @@
   - [SLA 光固化](#2-sla-光固化)
   - [SLS / MJF 粉末烧结](#3-sls--mjf-粉末烧结)
   - [CNC 数控加工](#4-cnc-数控加工)
+  - [难度系数定价](#难度系数定价)
+  - [支撑成本](#支撑成本)
   - [后处理费用](#后处理费用)
   - [交期加急费用](#交期加急费用)
   - [数量折扣](#数量折扣)
@@ -28,6 +30,7 @@
   - [通过 .env 文件覆盖](#4-通过-env-文件覆盖)
 - [支持的材料与工艺](#支持的材料与工艺)
 - [API 接口](#api-接口)
+- [用户系统](#用户系统)
 - [管理后台](#管理后台)
 - [数据库说明](#数据库说明)
 - [后续计划](#后续计划)
@@ -38,16 +41,25 @@
 
 ### 用户端
 
+- **用户注册/登录**：支持用户名+密码注册（含图片验证码）和登录，JWT Token 认证，7天有效期
+- **登录后报价**：必须登录后才能上传文件进行报价，未登录显示提示和登录按钮
+- **批量上传报价**：支持同时上传多个文件（最多 10 个），每个文件独立配置参数、独立报价，底部显示合计总价
+- **自动报价**：上传文件后自动触发报价，参数变更（材料、数量、表面处理、交期）后 500ms 防抖自动更新，无需手动点击
 - **多工艺支持**：FDM / SLA / SLS / MJF / CNC 五种制造工艺，各有独立报价策略
 - **19 种材料**：PLA、PETG、ABS、TPU、尼龙、标准/韧性/高温/柔性树脂、PA12/PA11/PA12+玻珠/TPU粉末、铝合金6061/7075、不锈钢304/316、黄铜、钛合金TC4
 - **3D 模型预览**：基于 Three.js 的在线模型查看器，支持旋转/缩放/平移，带包围盒尺寸标注
-- **文件预览卡片**：上传后显示缩略图预览 + 文件名 + 尺寸 + 体积 + 顶点/面片数
+- **紧凑报价卡片**：左右布局，左侧为 120×110px 缩略图预览（颜色随喷漆同步变化），右侧为文件名、尺寸、体积、参数面板、价格明细
 - **材料选择弹窗**：分类浏览（树脂/尼龙/金属/其他）、材料卡片、详情面板（图片+介绍+价格）、确认选择
 - **表面处理**：打磨、喷漆、抛光、阳极氧化、热处理等 11 种后处理，支持多选
-- **喷漆子选项**：哑光/高光 + 潘通色板选择（~40种常用色 + 自定义颜色）
+- **喷漆子选项**：哑光/高光 + 潘通色板选择（~40种常用色 + 自定义颜色），缩略图颜色同步更新
 - **交期选择**：标准(3天)、加急(2天)、特急(1天) 三档，默认加急(2天)
 - **多数量报价**：支持 1-1000 件批量报价，含数量折扣
+- **难度系数定价**：基于表面积/体积(SA/V)比自动识别薄壁件、精细件并加价
+- **支撑成本**：基于几何特征估算 FDM 支撑材料重量并独立计费
+- **价格明细展开**：点击"详情"展开完整的费用构成（材料、时间、支撑、难度、加急、后处理、折扣）
 - **STEP 文件支持**：自动转换 STEP/STP 文件为 STL 进行预览和报价
+- **报价历史**：查看所有历史报价记录，支持分页浏览、展开详情（完整成本明细和模型信息）、删除记录
+- **账号管理**：修改密码功能，导航栏显示用户名和管理员标识
 
 ### 管理端
 
@@ -56,7 +68,7 @@
 - **交期管理**：编辑各交期档位的加价系数和天数
 - **工艺映射**：管理各工艺下可用的材料和后处理选项
 - **设备限制**：设置各工艺的最大构建体积
-- **全局设置**：结构化编辑基础费率、各工艺最低起订价、数量折扣阶梯
+- **全局设置**：结构化编辑基础费率、各工艺最低起订价、难度系数、支撑成本、数量折扣阶梯
 - **材料图片上传**：为每种材料上传示例图片
 - **配置热刷新**：修改配置后自动刷新缓存，API 实时返回最新数据
 
@@ -71,14 +83,17 @@ Auto3DQuote/
 │   │   ├── main.py                   # 应用入口 + 静态文件挂载
 │   │   ├── core/
 │   │   │   ├── config.py             # 全局配置（默认值/环境变量）
-│   │   │   ├── dependencies.py       # FastAPI 依赖注入
+│   │   │   ├── dependencies.py       # FastAPI 依赖注入（含 get_current_user）
+│   │   │   ├── security.py           # JWT + 密码哈希
+│   │   │   ├── captcha.py            # 验证码生成/校验/限流
 │   │   │   └── exceptions.py         # 异常处理
 │   │   ├── db/
-│   │   │   ├── models.py             # SQLAlchemy 数据模型
-│   │   │   └── database.py           # 数据库引擎 + 种子数据
+│   │   │   ├── models.py             # SQLAlchemy 数据模型（含 User、QuoteRecord）
+│   │   │   └── database.py           # 数据库引擎 + 种子数据 + 迁移
 │   │   ├── models/
 │   │   │   ├── common.py             # 枚举定义（工艺、材料、质量等）
-│   │   │   ├── quote.py              # 报价数据模型
+│   │   │   ├── quote.py              # 报价数据模型 + 报价记录 Pydantic 模型
+│   │   │   ├── auth.py               # 用户认证 Pydantic 模型
 │   │   │   ├── analysis.py           # 网格分析结果模型
 │   │   │   └── slicing.py            # 切片结果模型
 │   │   ├── services/
@@ -94,11 +109,12 @@ Auto3DQuote/
 │   │   │       ├── fdm_strategy.py   # FDM 报价逻辑
 │   │   │       ├── sla_strategy.py   # SLA/SLS/MJF 报价逻辑
 │   │   │       ├── cnc_strategy.py   # CNC 报价逻辑
-│   │   │       ├── utils.py          # 后处理/交期/折扣/最低价计算
+│   │   │       ├── utils.py          # 后处理/交期/折扣/最低价/难度/支撑计算
 │   │   │       └── factory.py        # 策略工厂
 │   │   ├── api/v1/endpoints/
-│   │   │   ├── quote.py              # POST /api/v1/quote
+│   │   │   ├── quote.py              # POST /api/v1/quote（需登录，自动保存记录）
 │   │   │   ├── materials.py          # GET /api/v1/materials
+│   │   │   ├── auth.py               # /api/v1/auth/* 用户认证 + 报价历史 + 修改密码
 │   │   │   ├── admin.py              # /api/v1/admin/* 管理接口
 │   │   │   ├── admin_auth.py         # Admin Token 认证
 │   │   │   ├── convert.py            # POST /api/v1/convert (STEP→STL)
@@ -113,23 +129,30 @@ Auto3DQuote/
 │
 └── frontend/                         # 前端 (Vue 3 + TypeScript)
     └── src/
-        ├── App.vue                   # 根组件 + 路由
+        ├── App.vue                   # 根组件 + 路由 + 导航（登录/报价历史/改密）
+        ├── main.ts                   # 路由注册 + 会话恢复 + 登录路由守卫
         ├── pages/
-        │   ├── QuoterPage.vue        # 报价主页面（上传+配置+结果）
+        │   ├── QuoterPage.vue        # 报价主页面（登录拦截 + 批量上传+卡片列表+合计）
+        │   ├── QuotesHistoryPage.vue # 报价历史页面（分页+详情+删除）
         │   └── AdminPage.vue         # 管理后台页面
         ├── components/
+        │   ├── login/
+        │   │   ├── LoginModal.vue        # 全局登录/注册模态框
+        │   │   └── AuthForm.vue          # 登录/注册表单（含验证码）
+        │   ├── ChangePasswordDialog.vue  # 修改密码对话框
         │   ├── FileUpload.vue        # 文件拖拽上传
+        │   ├── QuoteCard.vue         # 报价卡片（缩略图+参数+价格，自动报价）
         │   ├── FilePreviewCard.vue   # 文件预览卡片（缩略图+信息）
         │   ├── ModelPreview.vue      # Three.js 全功能3D预览
         │   ├── PreviewModal.vue      # 全屏预览弹窗
         │   ├── MaterialSelectModal.vue # 材料选择弹窗（分类+详情）
         │   ├── MaterialCard.vue      # 材料卡片（图片+名称+价格）
-        │   ├── ParameterPanel.vue    # 参数面板（材料/表面处理/数量/交期）
+        │   ├── ParameterPanel.vue    # 参数面板（材料/表面处理/数量/交期，变更自动触发报价）
         │   ├── SurfaceTreatmentSection.vue # 表面处理多选
         │   ├── PaintSubOptionDialog.vue  # 喷漆子选项（哑光/高光+颜色）
         │   ├── PantoneColorPicker.vue # 潘通色板颜色选择器
         │   ├── DeliveryTimeSelector.vue # 交期选择器
-        │   ├── PriceDisplay.vue      # 价格展示 + 获取报价按钮
+        │   ├── PriceDisplay.vue      # 价格展示组件（纯展示）
         │   ├── InfoTooltip.vue       # 信息提示气泡
         │   ├── QuoteResult.vue       # 报价结果展示（含折扣/划线价）
         │   ├── StatusBadge.vue       # 报价状态徽章
@@ -140,9 +163,10 @@ Auto3DQuote/
         │       ├── DeliveryEditor.vue    # 交期选项管理
         │       ├── ProcessMappingEditor.vue # 工艺映射管理
         │       ├── MachineLimitsEditor.vue  # 设备体积限制管理
-        │       └── SettingsEditor.vue    # 全局设置（费率/最低价/折扣阶梯）
+        │       └── SettingsEditor.vue    # 全局设置（费率/最低价/难度系数/支撑成本/折扣阶梯）
         ├── composables/
-        │   ├── useQuoteApi.ts        # 报价 API 调用
+        │   ├── useQuoteApi.ts        # 报价 API + 报价历史 API（含 Auth Header）
+        │   ├── useAuth.ts            # 用户认证状态管理（登录/注册/改密）
         │   └── useAdminApi.ts        # 管理后台 API 调用
         ├── data/
         │   ├── material-categories.ts # 材料分类定义
@@ -209,18 +233,22 @@ FDM 是唯一会调用 PrusaSlicer 进行真实切片的工艺，报价数据最
 ```
 材料成本 = 切片耗材重量(g) × 材料单价(¥/g)
 时间成本 = 切片打印时间(h) × 机器费率(¥/h)
-基础价格 = 材料成本 + 时间成本 + 后处理费用 + 交期加急费
+支撑成本 = 支撑材料重量(g) × 材料单价(¥/g)    ← 几何估算
+难度加价 = (材料成本 + 时间成本) × 难度系数    ← SA/V 比驱动
+基础价格 = 材料成本 + 时间成本 + 支撑成本 + 难度加价 + 后处理费用 + 交期加急费
 单价     = 基础价格 × 加价率(1.3) - 数量折扣
 单价     = max(单价, 最低起订价)
 总价     = 单价 × 数量
 ```
 
-**示例**：PLA 材料、打印 2 小时、耗材 30g、标准交期
+**示例**：PLA 材料、打印 2 小时、耗材 30g、SA/V 比中等(难度系数1.1)、标准交期
 ```
 材料成本 = 30g × ¥0.18/g = ¥5.40
 时间成本 = 2h × ¥35/h    = ¥70.00
-基础价格 = ¥5.40 + ¥70.00 = ¥75.40
-单价     = ¥75.40 × 1.3   = ¥98.02
+支撑成本 = 30g×15% × ¥0.18/g = ¥0.81
+难度加价 = (¥5.40 + ¥70.00) × 0.1 = ¥7.54
+基础价格 = ¥5.40 + ¥70.00 + ¥0.81 + ¥7.54 = ¥83.75
+单价     = ¥83.75 × 1.3   = ¥108.88
 ```
 
 ### 2. SLA 光固化
@@ -234,18 +262,10 @@ SLA 按树脂体积计费，时间按层数 × 曝光时间估算。
 材料成本 = 模型体积(cm³) × 树脂单价(¥/cm³)
 打印时间 = 层数 × 每层曝光时间(8s) ÷ 3600
 时间成本 = 打印时间(h) × 机器费率(¥/h)
-基础价格 = 材料成本 + 时间成本 + 后处理费用 + 交期加急费
+难度加价 = (材料成本 + 时间成本) × 难度系数
+基础价格 = 材料成本 + 时间成本 + 难度加价 + 后处理费用 + 交期加急费
 单价     = 基础价格 × 加价率(1.3) - 数量折扣
 单价     = max(单价, 最低起订价)
-```
-
-**示例**：标准树脂、模型体积 50cm³、约 2000 层
-```
-材料成本 = 50cm³ × ¥0.50/cm³ = ¥25.00
-打印时间 = 2000 × 8s ÷ 3600   ≈ 4.44h
-时间成本 = 4.44h × ¥35/h      ≈ ¥155.56
-基础价格 = ¥25.00 + ¥155.56    = ¥180.56
-单价     = ¥180.56 × 1.3       ≈ ¥234.73
 ```
 
 ### 3. SLS / MJF 粉末烧结
@@ -271,20 +291,56 @@ CNC 按毛坯材料 + 加工工时计费，有最低起订金额。
 加工费用 = 加工工时 × 机床费率(¥/h)
 装夹费用 = ¥50（固定）
 基础价格 = 材料成本 + 加工费用 + 装夹费用 + 后处理费用 + 交期加急费
-单价     = max(基础价格 × 加价率 - 数量折扣, ¥100)  ← 最低起订 ¥100
+单价     = max(基础价格 × 加价率 - 数量折扣, ¥50)  ← 最低起订 ¥50
 总价     = 单价 × 数量
 ```
 
-**示例**：AL6061 铝合金、包围盒 100×80×50mm
+### 难度系数定价
+
+> 文件位置：`backend/app/services/pricing/utils.py` → `calc_difficulty_surcharge`
+
+系统通过 **表面积/体积比（SA/V ratio）** 自动识别打印难度较高的模型（薄壁件、精细件、复杂结构）。SA/V 比越高，意味着单位体积的表面积越大，打印越困难。
+
 ```
-毛坯体积 = 100×80×50 × 1.1 ÷ 1000 = 440cm³
-毛坯重量 = 440 × 2.70 ÷ 1000 = 1.188 kg
-材料成本 = 1.188 × ¥35/kg = ¥41.58
-加工工时 = (400×0.02 + 340×0.005 + 0.5) ≈ 11.7h
-加工费用 = 11.7 × ¥80/h = ¥936.00
-基础价格 = ¥41.58 + ¥936.00 + ¥50 = ¥1,027.58
-单价     = ¥1,027.58 × 1.3 ≈ ¥1,335.85
+SA/V ratio = 模型表面积(mm²) / 模型体积(mm³)
+
+难度评分 = clamp((SA/V - ratio_low) / (ratio_high - ratio_low), 0, 1)
+3D打印难度系数 = 1.0 + coefficient × 难度评分     ← 最高 1.3
+CNC难度系数   = 1.0 + cnc_coefficient × 难度评分   ← 最高 1.1
+
+难度加价 = (材料成本 + 时间成本) × (难度系数 - 1.0)
 ```
+
+默认配置：
+
+| 参数 | 值 | 说明 |
+|------|----|------|
+| `ratio_low` | 0.3 /mm | 低于此值视为简单件，不加价 |
+| `ratio_high` | 2.0 /mm | 高于此值视为最高难度 |
+| `coefficient` | 0.30 | 3D 打印最大加价系数（最高加价 30%） |
+| `cnc_coefficient` | 0.10 | CNC 最大加价系数（最高加价 10%） |
+
+难度系数可在管理后台全局设置中编辑。
+
+### 支撑成本
+
+> 文件位置：`backend/app/services/pricing/utils.py` → `calc_support_cost`
+
+FDM 打印的悬空部分需要支撑材料，系统基于模型几何特征估算支撑重量并独立计费。
+
+```
+支撑重量 = 模型重量(g) × support_percent%
+支撑成本 = 支撑重量(g) × 材料单价(¥/g)
+```
+
+默认配置：
+
+| 参数 | 值 | 说明 |
+|------|----|------|
+| `support_percent` | 15% | 支撑占模型重量百分比 |
+| `support_price_per_gram` | ¥0 | 支撑材料单价，0 表示与主材同价 |
+
+支撑成本可在管理后台全局设置中编辑。
 
 ### 后处理费用
 
@@ -354,11 +410,11 @@ CNC 按毛坯材料 + 加工工时计费，有最低起订金额。
 
 | 工艺 | 最低起订价 |
 |------|-----------|
-| FDM | ¥30 |
-| SLA | ¥30 |
-| SLS | ¥30 |
-| MJF | ¥30 |
-| CNC | ¥100 |
+| FDM | ¥5 |
+| SLA | ¥10 |
+| SLS | ¥10 |
+| MJF | ¥10 |
+| CNC | ¥50 |
 
 ### 完整计算流程
 
@@ -372,6 +428,10 @@ CNC 按毛坯材料 + 加工工时计费，有最低起订金额。
         策略工厂选择对应报价策略
                     ↓
         计算: 材料成本 + 时间成本
+                    ↓
+        叠加: 支撑成本（FDM 几何估算）
+                    ↓
+        叠加: 难度加价（SA/V 比驱动）
                     ↓
         叠加: 后处理费用（用户选择的后处理项）
                     ↓
@@ -404,6 +464,8 @@ CNC 按毛坯材料 + 加工工时计费，有最低起订金额。
 - **全局设置**：
   - 基础费率（机器时间费率、加价率、CNC装夹费、CNC最低订单）
   - 各工艺最低起订价（FDM/SLA/SLS/MJF/CNC 独立设置）
+  - 难度系数定价（SA/V 低阈值、高阈值、加价系数、CNC 系数）
+  - 支撑成本配置（支撑重量百分比、支撑材料单价）
   - 数量折扣阶梯（最低数量、折扣率、显示标签，支持添加/删除阶梯）
 
 修改后立即生效，无需重启服务。
@@ -425,7 +487,23 @@ MATERIAL_PRICING: dict[str, dict] = {
 
 # 最低起订价
 MINIMUM_ORDER_PER_PROCESS: dict[str, float] = {
-    "fdm": 30.0, "sla": 30.0, "sls": 30.0, "mjf": 30.0, "cnc": 100.0,
+    "fdm": 5.0, "sla": 10.0, "sls": 10.0, "mjf": 10.0, "cnc": 50.0,
+}
+
+# 难度系数定价
+DIFFICULTY_PRICING: dict = {
+    "ratio_low": 0.3,
+    "ratio_high": 2.0,
+    "coefficient": 0.30,
+    "cnc_coefficient": 0.10,
+    "enabled": True,
+}
+
+# 支撑成本配置
+SUPPORT_PRICING: dict = {
+    "enabled": True,
+    "support_percent": 15.0,
+    "support_price_per_gram": 0.0,
 }
 
 # 数量折扣阶梯
@@ -478,6 +556,8 @@ PRUSA_SLICER_PATH=D:\Program Files\Prusa3D\PrusaSlicer\prusa-slicer-console.exe
 
 ### 获取报价 `POST /api/v1/quote`
 
+> **需要登录**：请求需携带 `Authorization: Bearer <token>` 头，未认证返回 422。
+
 **参数**（`multipart/form-data`）：
 
 | 参数 | 类型 | 默认值 | 说明 |
@@ -499,6 +579,11 @@ PRUSA_SLICER_PATH=D:\Program Files\Prusa3D\PrusaSlicer\prusa-slicer-console.exe
 | `time_cost` | TimeCost | 时间成本明细 |
 | `post_process_costs` | PostProcessCost[] | 后处理费用列表 |
 | `delivery_surcharge` | float | 交期加急费 |
+| `difficulty_score` | float | 难度评分 (0.0~1.0) |
+| `difficulty_multiplier` | float | 难度系数 (1.0=无加价) |
+| `difficulty_surcharge` | float | 难度加价金额 (¥) |
+| `support_weight` | float | 支撑材料重量 (g) |
+| `support_cost` | float | 支撑材料成本 (¥) |
 | `quantity_discount` | float | 数量折扣金额 (¥) |
 | `quantity_discount_rate` | float | 数量折扣率 (如 0.06 = 6%) |
 | `base_price` | float | 基础价格（成本合计） |
@@ -523,6 +608,57 @@ PRUSA_SLICER_PATH=D:\Program Files\Prusa3D\PrusaSlicer\prusa-slicer-console.exe
 
 ---
 
+## 用户系统
+
+系统内置用户认证功能，注册/登录后才能使用报价服务。
+
+### 认证流程
+
+1. 用户通过注册接口创建账号（需验证码）
+2. 登录后获取 JWT Token（有效期 7 天）
+3. 前端将 Token 存储在 localStorage，每次请求携带 `Authorization: Bearer <token>`
+4. 报价请求自动保存为历史记录
+
+### 用户认证接口
+
+所有路径前缀为 `/api/v1/auth`。
+
+| 方法 | 路径 | 说明 | 认证 |
+|------|------|------|------|
+| GET | `/auth/captcha` | 获取图片验证码 | 否 |
+| POST | `/auth/register` | 注册新用户（需验证码），返回 JWT | 否 |
+| POST | `/auth/login` | 用户名+密码登录，返回 JWT | 否 |
+| GET | `/auth/me` | 获取当前用户信息 | 是 |
+| PUT | `/auth/password` | 修改密码（验证旧密码） | 是 |
+
+### 报价历史接口
+
+| 方法 | 路径 | 说明 | 认证 |
+|------|------|------|------|
+| GET | `/auth/quotes` | 获取报价记录列表（分页），管理员可查看所有用户 | 是 |
+| GET | `/auth/quotes/{id}` | 获取报价记录详情（含完整成本明细） | 是（校验归属） |
+| DELETE | `/auth/quotes/{id}` | 删除报价记录 | 是（校验归属） |
+
+### 用户角色
+
+| 角色 | 权限 |
+|------|------|
+| `user` | 报价、查看自己的历史记录、修改密码 |
+| `admin` | 所有 user 权限 + 管理后台访问 + 查看所有用户报价记录 |
+
+### 管理员账号
+
+在 `backend/.env` 中配置管理员种子账号：
+
+```env
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_password
+```
+
+首次启动时自动创建，已存在则跳过。
+
+---
+
 ## 管理后台
 
 管理后台提供在线配置管理功能，访问前端 `/admin` 路径即可使用。
@@ -540,7 +676,7 @@ PRUSA_SLICER_PATH=D:\Program Files\Prusa3D\PrusaSlicer\prusa-slicer-console.exe
 | 交期 | 编辑各档位加价系数和天数 |
 | 映射 | 管理各工艺可用的材料和后处理选项 |
 | 设备 | 设置各工艺最大构建体积 (X/Y/Z mm) |
-| 设置 | 结构化编辑基础费率、最低起订价、数量折扣阶梯 |
+| 设置 | 结构化编辑基础费率、最低起订价、难度系数、支撑成本、数量折扣阶梯 |
 
 ### 管理接口
 
@@ -579,11 +715,13 @@ PRUSA_SLICER_PATH=D:\Program Files\Prusa3D\PrusaSlicer\prusa-slicer-console.exe
 
 | 表名 | 说明 |
 |------|------|
+| `users` | 用户账号（用户名、密码哈希、角色、状态） |
+| `quote_records` | 报价历史记录（关联用户、文件名、工艺、材料、价格明细、模型数据） |
 | `materials` | 材料信息（单价、密度、分类、图片、介绍等） |
 | `post_processes` | 后处理选项（计费模式、价格、说明） |
 | `delivery_options` | 交期选项（加价系数、天数） |
 | `machine_volume_limits` | 各工艺设备构建体积限制 |
-| `global_settings` | 全局配置（时间费率、加价率、最低起订价、折扣阶梯等） |
+| `global_settings` | 全局配置（时间费率、加价率、最低起订价、难度系数、支撑成本、折扣阶梯等） |
 | `process_materials` | 工艺-材料关联（含排序） |
 | `process_post_processes` | 工艺-后处理关联（含排序） |
 
@@ -595,11 +733,14 @@ PRUSA_SLICER_PATH=D:\Program Files\Prusa3D\PrusaSlicer\prusa-slicer-console.exe
 
 ## 后续计划
 
-- [ ] 批量上传报价（多文件同时提交）
-- [ ] 用户系统与报价历史
+- [x] 用户系统与报价历史
+- [x] 登录后才能报价
+- [x] 报价历史记录查看/删除
+- [x] 修改密码功能
 - [ ] 购物车与在线支付
 - [ ] 对接真实生产排期系统
 - [ ] 支持 IGES 格式
+- [ ] 本地 PrusaSlicer 切片优化（确保与云端一致的结果）
 
 ---
 
