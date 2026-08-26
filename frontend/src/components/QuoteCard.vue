@@ -209,18 +209,6 @@ function fmtWeight(): string {
 function fmtTime(): string {
   return quoteResult.value?.slicing?.print_time_formatted ?? '--'
 }
-
-function priceLine(): string {
-  if (!quoteResult.value?.quote) return ''
-  const q = quoteResult.value.quote
-  const parts = [`材料¥${q.material_cost.subtotal.toFixed(2)}`, `时间¥${q.time_cost.subtotal.toFixed(2)}`]
-  if (q.support_cost > 0) parts.push(`支撑¥${q.support_cost.toFixed(2)}`)
-  if (q.difficulty_surcharge > 0) parts.push(`难度¥${q.difficulty_surcharge.toFixed(2)}`)
-  if (q.delivery_surcharge > 0) parts.push(`加急¥${q.delivery_surcharge.toFixed(2)}`)
-  for (const pp of q.post_process_costs) parts.push(`${pp.name}¥${pp.subtotal.toFixed(2)}`)
-  if (q.quantity_discount > 0) parts.push(`折扣-¥${q.quantity_discount.toFixed(2)}`)
-  return parts.join(' + ')
-}
 </script>
 
 <template>
@@ -280,9 +268,8 @@ function priceLine(): string {
           {{ error }}
         </div>
 
-        <!-- Row 5: price summary -->
-        <div v-if="quoteResult?.quote" class="flex items-center justify-between">
-          <span class="text-[10px] text-ghost/50 font-mono truncate">{{ priceLine() }}</span>
+        <!-- Row 5: detail toggle -->
+        <div v-if="quoteResult?.quote" class="flex items-center justify-end">
           <button
             @click="showDetail = !showDetail"
             class="text-[10px] text-teal/60 hover:text-teal font-mono flex-shrink-0 ml-2"
